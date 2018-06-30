@@ -1,36 +1,8 @@
 import numpy as np
 import math
+from  datetime import datetime
 import shelve
 from BP import BP
-
-
-class MySA:
-    @staticmethod
-    def train(BP, W, samples,path,t0=30000, v=0.8):
-        s = shelve.open(path)
-        e = 10 ** -12
-        t = t0
-        while BP.E(samples,W) > e and t > 3*10**-4:
-            for i in range(10):
-                W = MyBP.train(samples, W)
-                W_temp = []
-                for w in W:
-                    W_temp.append(w + (np.random.rand(w.shape[0],w.shape[1]) * 2 - 1))
-                dc = float(BP.E(samples,W_temp) - BP.E(samples, W))
-                pr = min(1, np.exp(-dc/t))
-                if pr >= np.random.rand():
-                    W = W_temp
-                    zzz = BP.output_y(samples[-1][0], W)
-                    try:
-                        ddd = -math.log((1 / float(zzz)) - 1)
-                    except ValueError as er:
-                        print(er)
-                    else:
-                        print(ddd)
-            s[str(t)] = W
-            t = v * t
-        s.close()
-        return W
 
 
 class MyBP(BP):
@@ -85,9 +57,42 @@ class MyBP(BP):
             W[0] = W[0] + DW1
             W[1] = W[1] + DW2
             c += 1
-            print(MyBP.E(samples, W))
         print(c)
         return W
+
+class BPSA:
+    @staticmethod
+    def train(samples, W, path='.', BP=MyBP, t0=30000, v=0.8, error=10**-8):
+        fpath = path + '/W_of_'+ str(np.random.rand())
+        print('开始模拟退火训练,训练数据保存至'+ fpath)
+        s = shelve.open(fpath)
+        t = t0
+        W = MyBP.train(samples, W)
+        while MyBP.E(samples,W) > error and t > 3*error:
+            # test
+            print('t:', t, '\nE:', MyBP.E(samples,W))
+            for i in range(3):
+                W_temp = []
+                for w in W:
+                    W_temp.append(w + (np.random.rand(w.shape[0],w.shape[1]) * 2 - 1))
+                dc = float(BP.E(samples,W_temp) - BP.E(samples, W))
+                pr = min(1, np.exp(-dc/t))
+                if pr >= np.random.rand():
+                    W = W_temp
+                    W = MyBP.train(samples, W, iterations=2000 + min(3*10**4, int(3/(t*10**2))))
+
+                    y = BP.output_y(samples[-1][0], W)
+                    try:
+                        print(MyBP.inverse_sigmoid(y))
+                    except ValueError as er:
+                        print(er)
+            s[str(t)] = W
+            t = v * t
+        W = MyBP.train(samples, W, iterations=3*10**4)
+        s['0'] = W
+        s.close()
+        return W
+
 
 
 if __name__ == '__main__':
@@ -117,11 +122,7 @@ if __name__ == '__main__':
     W2 = np.asmatrix(np.vstack([theta2, w2]))
     W = [W1, W2]
 
-    W = MyBP.train(samples,W, iterations=5000)
-
-    zzz = BP.output_y(test2[0], W)
-    ddd = -math.log((1 / float(zzz)) - 1)
-    print(ddd)
+    BPSA.train(samples, W)
 
 
 

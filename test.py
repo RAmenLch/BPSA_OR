@@ -3,7 +3,7 @@ import shelve
 from BPSA import *
 
 
-s = shelve.open('W_test1.db')
+s = shelve.open('W_of_0.22140270125723926')
 sk = s.keys()
 samples = [
         (np.mat([5.33, 5.39, 5.29, 5.41, 5.45]), 5.50),
@@ -21,13 +21,14 @@ samples = [
         (np.mat([5.81, 5.86, 5.90, 5.97, 6.49]), 6.60),
         (np.mat([5.86, 5.90, 5.97, 6.49, 6.60]), 6.64)
     ]
-W = s['0.0003392346364374514']
-print(BP.E(samples,W))
+
 # for sks in sk:
 #     print(sks)
-W = BP.train(samples, W, 8000)
-print(BP.E(samples,W))
-x = BP.output(np.mat([6.49,6.60,6.64,6.74,6.87]),W)
-x = -math.log((1 / float(x)) - 1)
-print(x)
-#SA.train(BP, W,samples, 'W_test1.db', t0=276.7011611056436)
+W = s['0']
+E = MyBP.E(samples,W)
+
+
+x = MyBP.output_y(np.mat([6.49,6.60,6.64,6.74,6.87]), W)
+x2 = MyBP.output_y(samples[0][0], W)
+x2 = MyBP.inverse_sigmoid(x2)
+print(x2)
