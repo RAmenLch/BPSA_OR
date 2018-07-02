@@ -60,36 +60,57 @@ class MyBP(BP):
         print(c)
         return W
 
+
 class BPSA:
+    # 状态生成函数
     @staticmethod
-    def train(samples, W, path='.', BP=MyBP, t0=30000, v=0.8, error=10**-8):
-        fpath = path + '/W_of_'+ str(np.random.rand())
+    def genete(W, inv=(-1,1)):
+        W_temp = []
+        for w in W:
+            W_temp.append(w + (np.random.rand(w.shape[0], w.shape[1]) * (inv[1] - inv[0]) + inv[0]))
+        return W_temp
+
+    @staticmethod
+    def train(samples, W, path='.', BP=MyBP, t0=30000, v=0.8, error=10**-8,**kwargs):
+        if 'fname' in kwargs:
+            fpath = path + '/W_of_' + kwargs['fname']
+        else:
+            fpath = path + '/W_of_'+ str(np.random.rand())
         print('开始模拟退火训练,训练数据保存至'+ fpath)
-        s = shelve.open(fpath)
         t = t0
         W = MyBP.train(samples, W)
+        best_W = W
         while MyBP.E(samples,W) > error and t > 3*error:
             # test
             print('t:', t, '\nE:', MyBP.E(samples,W))
-            for i in range(3):
-                W_temp = []
-                for w in W:
-                    W_temp.append(w + (np.random.rand(w.shape[0],w.shape[1]) * 2 - 1))
+            for i in range(10):
+                W_temp = BPSA.genete(W,(-4,4))
                 dc = float(BP.E(samples,W_temp) - BP.E(samples, W))
                 pr = min(1, np.exp(-dc/t))
                 if pr >= np.random.rand():
                     W = W_temp
-                    W = MyBP.train(samples, W, iterations=2000 + min(3*10**4, int(3/(t*10**2))))
+                    W = MyBP.train(samples, W, iterations=1000 + min(3*10**4, int(3/(t*10))))
 
+                    # 保存找到的最优解,如果传入tests,则也验证tests
+                    if 'tests' in kwargs:
+                        flag = MyBP.E(kwargs['tests'], W) < MyBP.E(kwargs['tests'],best_W)
+                    else:
+                        flag = True
+                    if MyBP.E(samples,W) < MyBP.E(samples,best_W) and flag:
+                        best_W = W
+
+                    # test
                     y = BP.output_y(samples[-1][0], W)
                     try:
                         print(MyBP.inverse_sigmoid(y))
                     except ValueError as er:
                         print(er)
-            s[str(t)] = W
             t = v * t
+
         W = MyBP.train(samples, W, iterations=3*10**4)
+        s = shelve.open(fpath)
         s['0'] = W
+        s['best'] = best_W
         s.close()
         return W
 

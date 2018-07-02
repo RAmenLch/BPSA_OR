@@ -55,4 +55,4 @@ class BP:
 
     @staticmethod
     def train(**kwargs):
-        raise NotImplementedError("没有实现训练函数train")
+        raise NotImplementedError("没有实现训练函数 train")
